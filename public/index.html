@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pasuk — the Torah, one verse at a time</title>
+<meta name="description" content="The Torah, one verse per swipe. Original Hebrew, the 1917 JPS translation, and the weekly portion it belongs to." />
+<meta name="theme-color" content="#0a0b0d" />
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="/style.css" />
+<meta property="og:title" content="Pasuk — the Torah, one verse at a time" />
+<meta property="og:description" content="A calm, distraction-free way to read the Torah: one verse per swipe, original Hebrew, the 1917 JPS translation, and the weekly portion it belongs to." />
+<meta property="og:type" content="website" />
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<section id="onboarding" class="screen">
+  <div class="onb-wrap">
+    <div class="onb-mark" aria-hidden="true">&#1488;</div>
+    <h1>Pasuk</h1>
+    <p class="onb-sub">The Torah. One verse at a time.</p>
+
+    <div class="onb-points">
+      <div class="onb-point">
+        <span class="onb-num">01</span>
+        <p>Swipe up through all 5,846 verses of the Five Books of Moses — the same motion as any feed you already scroll.</p>
+      </div>
+      <div class="onb-point">
+        <span class="onb-num">02</span>
+        <p>Tap a verse to see the original Hebrew, the 1917 JPS English translation, and the weekly Torah portion it belongs to.</p>
+      </div>
+      <div class="onb-point">
+        <span class="onb-num">03</span>
+        <p>Keep the verses that land. Nothing is tracked, nothing is sold — just text, kept where you left it.</p>
+      </div>
+    </div>
+
+    <button id="startBtn" class="onb-start">Start reading</button>
+    <p class="onb-footnote">Hebrew text and "The Holy Scriptures: A New Translation" (JPS, 1917), both public domain, via Sefaria.</p>
+  </div>
+</section>
+
+<!-- FEED -->
+<main id="feed" class="screen feed-screen" hidden></main>
+
+<!-- DETAIL SHEET -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true">
+    <button id="sheetClose" class="sheet-close" aria-label="Close">&times;</button>
+    <div class="sheet-scroll">
+      <div class="sheet-kicker"></div>
+      <h2 class="sheet-chapter-title"></h2>
+      <p class="sheet-chapter-summary"></p>
+      <div class="sheet-divider"></div>
+      <div class="sheet-label">Hebrew</div>
+      <p class="sheet-hebrew" dir="rtl"></p>
+      <div class="sheet-label">Plain English</div>
+      <p class="sheet-translation"></p>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
