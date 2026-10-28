@@ -16,6 +16,10 @@
   const sheet = document.getElementById("sheet");
   const sheetBackdrop = document.getElementById("sheetBackdrop");
   const sheetClose = document.getElementById("sheetClose");
+  const parshaSheet = document.getElementById("parshaSheet");
+  const parshaBackdrop = document.getElementById("parshaBackdrop");
+  const parshaClose = document.getElementById("parshaClose");
+  const parshaListEl = document.getElementById("parshaList");
 
   let verses = [];
   let renderedCount = 0;
@@ -24,6 +28,8 @@
   let io = null;
   let progressBar = null;
   let progressLabel = null;
+  let parshas = []; // [{ parsha, book, firstIdx, lastIdx, startChapter, startVerse, endChapter, endVerse, count }]
+  let currentParsha = "";
 
   function loadSet(key) {
     try {
@@ -158,6 +164,7 @@
   }
 
   function updateProgress(idx, book, parsha) {
+    currentParsha = parsha;
     if (progressBar) {
       const pct = ((idx + 1) / verses.length) * 100;
       progressBar.style.width = pct.toFixed(2) + "%";
@@ -165,6 +172,85 @@
     if (progressLabel) {
       progressLabel.textContent = `${book} · ${parsha}`;
     }
+  }
+
+  // Group the sequential verse list into its 54 weekly Torah portions, in
+  // canonical order (the data is already Genesis→Deuteronomy ordered, so
+  // first-seen insertion order into the Map is the correct parsha order).
+  function buildParshas() {
+    const map = new Map();
+    verses.forEach((v, idx) => {
+      if (!map.has(v.parsha)) {
+        map.set(v.parsha, {
+          parsha: v.parsha,
+          book: v.book,
+          firstIdx: idx,
+          lastIdx: idx,
+          startChapter: v.chapter,
+          startVerse: v.verse,
+          endChapter: v.chapter,
+          endVerse: v.verse,
+          count: 0,
+        });
+      }
+      const p = map.get(v.parsha);
+      p.lastIdx = idx;
+      p.endChapter = v.chapter;
+      p.endVerse = v.verse;
+      p.count += 1;
+    });
+    parshas = [...map.values()];
+  }
+
+  function parshaRange(p) {
+    return p.startChapter === p.endChapter
+      ? `${p.startChapter}:${p.startVerse}–${p.endVerse}`
+      : `${p.startChapter}:${p.startVerse}–${p.endChapter}:${p.endVerse}`;
+  }
+
+  function renderParshaList() {
+    let html = "";
+    let lastBook = null;
+    parshas.forEach((p) => {
+      if (p.book !== lastBook) {
+        html += `<div class="parsha-book-header">${escapeHtml(p.book)}</div>`;
+        lastBook = p.book;
+      }
+      html += `
+        <button class="parsha-row${p.parsha === currentParsha ? " parsha-row-active" : ""}" data-parsha="${escapeHtml(p.parsha)}">
+          <span class="parsha-row-names">
+            <span class="parsha-row-title">${escapeHtml(p.parsha)}</span>
+            <span class="parsha-row-range">${escapeHtml(p.book)} ${parshaRange(p)} &middot; ${p.count} verses</span>
+          </span>
+        </button>`;
+    });
+    parshaListEl.innerHTML = html;
+  }
+
+  // Jump to a parsha's first verse. Uses the single-write renderUpTo() (not a
+  // loop of renderNextBatch()) so a jump to a late parsha (e.g. Vezot
+  // Haberachah, near verse 5,846) never blocks the main thread the way the
+  // original per-batch deep-link loop did before that bug was fixed.
+  function jumpToParsha(name) {
+    const target = parshas.find((p) => p.parsha === name);
+    if (!target) return;
+    renderUpTo(target.firstIdx);
+    closeParshaSheet();
+    requestAnimationFrame(() => {
+      const el = feedEl.querySelector(`.verse-card[data-idx="${target.firstIdx}"]`);
+      if (el) el.scrollIntoView({ block: "start" });
+    });
+  }
+
+  function openParshaSheet() {
+    renderParshaList();
+    parshaSheet.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeParshaSheet() {
+    parshaSheet.hidden = true;
+    document.body.style.overflow = "";
   }
 
   function openSheet(id) {
@@ -283,6 +369,8 @@
     const label = document.createElement("div");
     label.className = "feed-progress-label";
     label.textContent = "Genesis · Bereshit";
+    label.setAttribute("aria-label", "Jump to a parsha");
+    label.addEventListener("click", openParshaSheet);
     document.body.appendChild(label);
     progressLabel = label;
   }
@@ -299,6 +387,8 @@
     }
     onboarding.hidden = true;
     feedEl.hidden = false;
+    buildParshas();
+    currentParsha = parshas[0] ? parshas[0].parsha : "";
     createProgressBar();
     setupObservers();
     wireFeedEvents();
@@ -320,7 +410,14 @@
   startBtn.addEventListener("click", start);
   sheetClose.addEventListener("click", closeSheet);
   sheetBackdrop.addEventListener("click", closeSheet);
+  parshaClose.addEventListener("click", closeParshaSheet);
+  parshaBackdrop.addEventListener("click", closeParshaSheet);
+  parshaListEl.addEventListener("click", (e) => {
+    const row = e.target.closest(".parsha-row");
+    if (row) jumpToParsha(row.dataset.parsha);
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !sheet.hidden) closeSheet();
+    if (e.key === "Escape" && !parshaSheet.hidden) closeParshaSheet();
   });
 })();

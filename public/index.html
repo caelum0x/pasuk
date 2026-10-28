@@ -44,6 +44,35 @@
 <!-- FEED -->
 <main id="feed" class="screen feed-screen" hidden></main>
 
+<!-- PARSHA NAVIGATOR SHEET -->
+<div id="parshaSheet" class="sheet" hidden>
+  <div class="sheet-backdrop" id="parshaBackdrop"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Jump to a weekly Torah portion">
+    <button id="parshaClose" class="sheet-close" aria-label="Close">&times;</button>
+    <div class="sheet-scroll">
+      <div class="sheet-kicker">54 parshas &middot; 5,846 verses</div>
+      <h2 class="sheet-chapter-title">Jump to a parsha</h2>
+      <div id="parshaList" class="parsha-list"></div>
+      <div class="sheet-divider"></div>
+      <div class="more-texts">
+        <div class="sheet-label">More sacred texts, same format</div>
+        <a class="more-texts-link" href="https://shloka.ereboslab.com" target="_blank" rel="noopener">
+          <span class="more-texts-name">Shloka</span>
+          <span class="more-texts-desc">Bhagavad Gita, one shloka at a time</span>
+        </a>
+        <a class="more-texts-link" href="https://gatha.ereboslab.com" target="_blank" rel="noopener">
+          <span class="more-texts-name">Gatha</span>
+          <span class="more-texts-desc">The Dhammapada, one verse at a time</span>
+        </a>
+        <a class="more-texts-link" href="https://versling.subasiarhan3.workers.dev" target="_blank" rel="noopener">
+          <span class="more-texts-name">Versling</span>
+          <span class="more-texts-desc">The Quran, one verse at a time</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DETAIL SHEET -->
 <div id="sheet" class="sheet" hidden>
   <div class="sheet-backdrop" id="sheetBackdrop"></div>

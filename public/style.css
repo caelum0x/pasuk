@@ -161,7 +161,7 @@ html, body {
   color: var(--fg-faint);
   margin: 0;
   direction: rtl;
-  text-align: left;
+  text-align: right;
 }
 
 .verse-tap-hint {
@@ -233,14 +233,105 @@ html, body {
 }
 .feed-progress-label {
   position: fixed;
-  top: calc(22px + var(--safe-top));
-  right: 20px;
+  top: calc(18px + var(--safe-top));
+  right: 16px;
   font-size: 10.5px;
   letter-spacing: 0.06em;
-  color: var(--fg-faint);
+  color: var(--fg-dim);
   z-index: 5;
-  pointer-events: none;
+  pointer-events: auto;
+  background: rgba(19,20,25,0.55);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: inherit;
   text-align: right;
+}
+.feed-progress-label:active { opacity: 0.8; }
+
+/* ---------- Parsha navigator ---------- */
+.parsha-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 20px;
+}
+
+.parsha-book-header {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding: 14px 6px 6px;
+}
+.parsha-book-header:first-child { padding-top: 2px; }
+
+.parsha-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--fg);
+  text-align: left;
+  padding: 10px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.parsha-row:active { background: rgba(255,255,255,0.05); }
+
+.parsha-row-active {
+  background: rgba(111,155,209,0.14);
+}
+
+.parsha-row-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.parsha-row-title {
+  font-size: 14.5px;
+  color: var(--fg);
+}
+
+.parsha-row-range {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+}
+
+/* ---------- Cross-link to sibling sacred-text apps ---------- */
+.more-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+
+.more-texts-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.more-texts-link:active { background: rgba(255,255,255,0.05); }
+
+.more-texts-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.more-texts-desc {
+  font-size: 12px;
+  color: var(--fg-dim);
 }
 
 /* ---------- Detail sheet ---------- */
