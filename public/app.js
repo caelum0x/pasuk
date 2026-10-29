@@ -96,7 +96,7 @@
     }
   }
   function saveSet(key, set) {
-    localStorage.setItem(key, JSON.stringify([...set]));
+    try { localStorage.setItem(key, JSON.stringify([...set])); } catch (e) { /* storage unavailable */ }
   }
   function loadNotes() {
     try {
@@ -106,7 +106,7 @@
     }
   }
   function saveNotes(notes) {
-    localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+    try { localStorage.setItem(LS_NOTES, JSON.stringify(notes)); } catch (e) { /* storage unavailable */ }
   }
   function safeGetLastRead() {
     try { return localStorage.getItem(LS_LAST_READ); } catch (e) { return null; }
