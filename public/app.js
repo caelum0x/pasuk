@@ -67,6 +67,18 @@
   const likes = loadSet(LS_LIKES);
   const notes = loadNotes();
 
+  // A shared verse (`shareVerse()` below) produces a link like
+  // `https://pasuk.ereboslab.com/#Genesis.1.1`. Previously, opening that
+  // link cold still forced the recipient through the onboarding screen and
+  // a manual "Start reading" tap before they ever saw the verse that was
+  // actually shared with them — the deep link only "worked" after an extra
+  // step, undermining the app's main stated growth lever (shares). If the
+  // URL already carries a valid verse hash on first load, skip onboarding
+  // and jump straight into the feed at that verse. Same fix as Shloka
+  // (commit ca0e400) and Gatha, applied to Pasuk's own `Book.chapter.verse`
+  // id format.
+  const hasDeepLinkHash = /^#?[A-Za-z]+\.\d+\.\d+$/.test(location.hash);
+
   async function fetchData() {
     const res = await fetch("/data/torah.json");
     if (!res.ok) throw new Error("failed to load verses");
@@ -509,4 +521,6 @@
     if (e.key === "Escape" && !parshaSheet.hidden) closeParshaSheet();
     if (e.key === "Escape" && !keptSheet.hidden) closeKeptSheet();
   });
+
+  if (hasDeepLinkHash) start();
 })();
