@@ -9,6 +9,7 @@
 
   const LS_LIKES = "pasuk:likes";
   const LS_NOTES = "pasuk:notes";
+  const LS_LAST_READ = "pasuk:lastRead";
 
   const onboarding = document.getElementById("onboarding");
   const startBtn = document.getElementById("startBtn");
@@ -55,6 +56,12 @@
   }
   function saveNotes(notes) {
     localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+  }
+  function safeGetLastRead() {
+    try { return localStorage.getItem(LS_LAST_READ); } catch (e) { return null; }
+  }
+  function safeSetLastRead(id) {
+    try { localStorage.setItem(LS_LAST_READ, id); } catch (e) { /* storage unavailable */ }
   }
 
   const likes = loadSet(LS_LIKES);
@@ -162,13 +169,13 @@
       entries.forEach((e) => {
         if (e.isIntersecting && e.intersectionRatio > 0.6) {
           const idx = parseInt(e.target.getAttribute("data-idx"), 10);
-          updateProgress(idx, e.target.getAttribute("data-book"), e.target.getAttribute("data-parsha"));
+          updateProgress(idx, e.target.getAttribute("data-book"), e.target.getAttribute("data-parsha"), e.target.getAttribute("data-id"));
         }
       });
     }, { root: feedEl, threshold: [0.6] });
   }
 
-  function updateProgress(idx, book, parsha) {
+  function updateProgress(idx, book, parsha, id) {
     currentParsha = parsha;
     if (progressBar) {
       const pct = ((idx + 1) / verses.length) * 100;
@@ -177,6 +184,7 @@
     if (progressLabel) {
       progressLabel.textContent = `${book} · ${parsha}`;
     }
+    if (id) safeSetLastRead(id);
   }
 
   // Group the sequential verse list into its 54 weekly Torah portions, in
@@ -463,6 +471,15 @@
     if (hashId) {
       const idx = verses.findIndex((v) => v.id === hashId);
       if (idx >= 0) jumpToIndex(idx);
+    } else {
+      const lastReadId = safeGetLastRead();
+      if (lastReadId && lastReadId !== verses[0].id) {
+        const idx = verses.findIndex((v) => v.id === lastReadId);
+        if (idx > 0) {
+          jumpToIndex(idx);
+          toast("Continuing where you left off");
+        }
+      }
     }
   }
 
