@@ -771,6 +771,39 @@
     }
   });
 
+  // Picks up likes/notes written by another tab/window of this same app
+  // (e.g. two tabs open on the same device, or the OS restoring tabs) so
+  // this tab's UI — and its own next write, which would otherwise silently
+  // clobber the other tab's change — never works from a stale snapshot.
+  // likes/notes are `const` bindings closed over by every render/toggle
+  // function above, so refresh them in place (clear + repopulate) rather
+  // than reassigning, which would desync the closures.
+  window.addEventListener("storage", (e) => {
+    if (e.key === LS_LIKES) {
+      const fresh = loadSet(LS_LIKES);
+      likes.clear();
+      fresh.forEach((id) => likes.add(id));
+      feedEl.querySelectorAll(".like-btn").forEach((btn) => {
+        const liked = likes.has(btn.dataset.id);
+        btn.classList.toggle("liked", liked);
+        const count = btn.querySelector(".action-count");
+        if (count) count.textContent = liked ? "Kept" : "Keep";
+      });
+      updateKeptCount();
+      if (!keptSheet.hidden) renderKeptList();
+    } else if (e.key === LS_NOTES) {
+      const fresh = loadNotes();
+      Object.keys(notes).forEach((k) => delete notes[k]);
+      Object.assign(notes, fresh);
+      feedEl.querySelectorAll(".note-btn").forEach((btn) => {
+        const count = btn.querySelector(".action-count");
+        if (count) count.textContent = notes[btn.dataset.id] ? "Noted" : "Note";
+      });
+      updateNotesCount();
+      if (!notesSheet.hidden) renderNotesList();
+    }
+  });
+
   if (hasDeepLinkHash) start();
 
   if ("serviceWorker" in navigator) {
