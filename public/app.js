@@ -86,6 +86,7 @@
   let notesBtn = null;
   let parshas = []; // [{ parsha, book, firstIdx, lastIdx, startChapter, startVerse, endChapter, endVerse, count }]
   let currentParsha = "";
+  let currentIdx = 0;
 
   function loadSet(key) {
     try {
@@ -238,6 +239,7 @@
   }
 
   function updateProgress(idx, book, parsha, id) {
+    currentIdx = idx;
     currentParsha = parsha;
     if (progressBar) {
       const pct = ((idx + 1) / verses.length) * 100;
@@ -313,6 +315,23 @@
       const el = feedEl.querySelector(`.verse-card[data-idx="${idx}"]`);
       if (el) el.scrollIntoView({ block: "start" });
     });
+  }
+
+  // ---------- Keyboard feed navigation ----------
+  // The feed region (html/body overflow:hidden, #feed owns its own
+  // overflow-y:scroll) has no tabindex and is never a focus target, and
+  // Arrow/PageDown keys were never wired to it — so a keyboard-only user
+  // (no mouse, no touchscreen) had literally no way to move past the first
+  // rendered batch of cards short of Tabbing through all 3 action buttons
+  // on each of up to 5,846 cards one at a time. Mirrors jumpToIndex's own
+  // single-write renderUpTo() so this never reintroduces the old per-batch
+  // deep-link stall.
+  function moveVerse(delta) {
+    if (!verses.length) return;
+    const next = Math.min(Math.max(currentIdx + delta, 0), verses.length - 1);
+    if (next === currentIdx) return;
+    currentIdx = next;
+    jumpToIndex(next);
   }
 
   function jumpToParsha(name) {
@@ -709,6 +728,23 @@
       } else if (!e.shiftKey && document.activeElement === last) {
         e.preventDefault();
         first.focus();
+      }
+    }
+
+    // Keyboard-only feed navigation (see moveVerse() above). Only active
+    // once the feed has started, no modal is open, and focus isn't inside
+    // a text field (so typing in the note/search textareas is unaffected).
+    if (!activeModal && !feedEl.hidden) {
+      const tag = document.activeElement ? document.activeElement.tagName : "";
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      if (!typing) {
+        if (e.key === "ArrowDown" || e.key === "PageDown") {
+          e.preventDefault();
+          moveVerse(1);
+        } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+          e.preventDefault();
+          moveVerse(-1);
+        }
       }
     }
   });
