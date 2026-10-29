@@ -360,8 +360,21 @@ html, body {
   font-family: inherit;
   outline: none;
   margin: 2px 0 16px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .parsha-search::placeholder { color: var(--fg-faint); }
+/* The native outline was removed above for visual consistency with the
+   pill-shaped border, but nothing replaced it — a real WCAG 2.1 SC 2.4.7
+   (Focus Visible, Level AA) failure: a keyboard-only user tabbing to this
+   input got zero visual change (confirmed live via computed-style
+   comparison: focused vs. unfocused border/outline/box-shadow were
+   byte-identical). Restore a real, visible focus indicator using the
+   existing --accent token so it matches the app's own design language
+   instead of the browser's default blue ring. */
+.parsha-search:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(111,155,209,0.35);
+}
 
 .parsha-result-item {
   display: flex;
