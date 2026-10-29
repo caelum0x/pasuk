@@ -143,7 +143,7 @@
         <div class="verse-inner" data-open="${v.id}">
           <div class="verse-chapter-tag">${escapeHtml(v.book)} ${v.chapter}:${v.verse} &middot; ${escapeHtml(v.parsha || "")}</div>
           <p class="verse-text">${escapeHtml(v.translation)}</p>
-          <p class="verse-hebrew-preview">${escapeHtml(truncate(v.hebrew, 60))}</p>
+          <p class="verse-hebrew-preview" lang="he" dir="rtl">${escapeHtml(truncate(v.hebrew, 60))}</p>
         </div>
         <div class="verse-tap-hint">Tap to read Hebrew &amp; context</div>
         <div class="verse-actions">
@@ -515,6 +515,7 @@
       `${v.book} ${v.chapter}:${v.verse} · Parashat ${v.parsha}`;
     sheet.querySelector(".sheet-chapter-title").textContent = v.parsha;
     sheet.querySelector(".sheet-chapter-summary").textContent = v.parshaSummary;
+    sheet.querySelector(".sheet-hebrew").setAttribute("lang", "he");
     sheet.querySelector(".sheet-hebrew").textContent = v.hebrew;
     sheet.querySelector(".sheet-translation").textContent = v.translation;
 
