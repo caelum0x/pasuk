@@ -2,8 +2,14 @@
   --bg: #0a0b0d;
   --fg: #eef0f4;
   --fg-dim: rgba(238,240,244,0.62);
-  --fg-faint: rgba(238,240,244,0.38);
+  --fg-faint: rgba(238,240,244,0.52);
   --accent: #6f9bd1;
+  /* fg-faint was 0.38 alpha (contrast ~3.22:1 against --bg), below the
+     WCAG 2.1 AA 4.5:1 minimum for the normal-size text it's used on
+     (onboarding footnote, Hebrew preview line, tap hint, parsha search
+     placeholder, book headers, parsha ranges, sheet labels). Raised to
+     0.52 alpha (~5.1:1) so it clears AA with margin while staying
+     visually dimmer than --fg-dim (0.62 alpha, ~6.9:1). */
   --line: rgba(238,240,244,0.14);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
