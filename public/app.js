@@ -77,9 +77,25 @@
 
   let verses = [];
   let renderedCount = 0;
+  let renderedStart = 0; // first index currently present in the DOM (see windowJumpTo)
   const BATCH = 20;
+  // A far jump (deep link, parsha jump, search/kept/notes-row jump) renders at
+  // most this many cards instead of every card between the current render
+  // position and the target. See windowJumpTo() for why: with Pasuk's
+  // 5,846-verse dataset (13.8x sibling app Gatha's 423), rendering "every
+  // card up to the target" in one shot measured as a real 3.5-6s
+  // main-thread-blocking long task under realistic mobile CPU throttle when
+  // jumping to a late verse (confirmed live via Playwright/CDP longtask
+  // timing against production before this fix).
+  const JUMP_WINDOW = BATCH * 2;
+  // A forward jump this close to the already-rendered range is cheap enough
+  // (<= 3 batches) to just contiguously fill via the existing renderUpTo(),
+  // same as ordinary infinite scroll — no need to throw away the DOM.
+  const CONTIGUOUS_FILL_LIMIT = BATCH * 3;
   let sentinel = null;
+  let topSentinel = null;
   let io = null;
+  let ioTop = null;
   let progressBar = null;
   let progressLabel = null;
   let keptBtn = null;
@@ -201,9 +217,11 @@
     observeCards();
   }
 
-  // Bulk-render every card up to and including targetIdx in a single DOM write.
-  // Used for deep-link jumps (e.g. #Deuteronomy.34.12) so the browser never has
-  // to lay out thousands of individual insertAdjacentHTML calls one at a time.
+  // Bulk-render every card from the current render position up to and
+  // including targetIdx in a single DOM write. Only called for a *close*
+  // forward jump (see CONTIGUOUS_FILL_LIMIT) — a single insertAdjacentHTML
+  // write instead of a loop of per-batch writes, so the browser never has to
+  // lay out thousands of individual small inserts one at a time.
   function renderUpTo(targetIdx) {
     if (renderedCount > targetIdx) return;
     const end = Math.min(targetIdx + 1, verses.length);
@@ -218,12 +236,72 @@
     observeCards();
   }
 
+  // Render only a bounded window of JUMP_WINDOW cards ending at targetIdx,
+  // discarding whatever was previously in the DOM, instead of every card
+  // from the start of the render range up to targetIdx. This is the real fix
+  // for the multi-second main-thread hang: the old renderUpTo()-for-everything
+  // approach kept the single-DOM-write discipline but still had to build and
+  // lay out HTML proportional to targetIdx itself, so a deep link near
+  // Pasuk's 5,846th verse rendered nearly the entire feed (9.5MB of markup,
+  // ~17k inline SVG icons) in one shot. Jump cost is now constant regardless
+  // of dataset size or target position. Backward scrolling out of the window
+  // is handled by the top sentinel / renderPrevBatch() below.
+  function windowJumpTo(targetIdx) {
+    const start = Math.max(0, targetIdx - JUMP_WINDOW + 1);
+    const end = Math.min(verses.length, targetIdx + 1);
+    let html = "";
+    for (let i = start; i < end; i++) {
+      html += cardHtml(verses[i], i);
+    }
+    feedEl.innerHTML = html;
+    renderedStart = start;
+    renderedCount = end;
+    observeCards();
+    attachSentinel();
+    attachTopSentinel();
+  }
+
   function attachSentinel() {
     sentinel = document.createElement("div");
     sentinel.style.height = "1px";
     sentinel.id = "sentinel";
     feedEl.appendChild(sentinel);
     if (io) io.observe(sentinel);
+  }
+
+  // Mirrors attachSentinel() but for backward (scroll-up) infinite-fill,
+  // only needed once a windowed jump has left earlier verses (index <
+  // renderedStart) unrendered. No-op while renderedStart is 0 (the normal,
+  // never-jumped-far case), so this adds no cost to the common path.
+  function attachTopSentinel() {
+    if (topSentinel) { topSentinel.remove(); topSentinel = null; }
+    if (renderedStart <= 0) return;
+    topSentinel = document.createElement("div");
+    topSentinel.style.height = "1px";
+    topSentinel.id = "sentinel-top";
+    feedEl.insertBefore(topSentinel, feedEl.firstChild);
+    if (ioTop) ioTop.observe(topSentinel);
+  }
+
+  // Prepends the previous batch of cards above the current window when the
+  // user scrolls up to the top sentinel. Preserves scroll position (prepending
+  // content above the viewport otherwise visually shifts everything already
+  // on screen, since scrollTop doesn't auto-adjust for content inserted above it).
+  function renderPrevBatch() {
+    if (renderedStart <= 0) return;
+    const start = Math.max(0, renderedStart - BATCH);
+    let html = "";
+    for (let i = start; i < renderedStart; i++) {
+      html += cardHtml(verses[i], i);
+    }
+    const prevScrollTop = feedEl.scrollTop;
+    const prevScrollHeight = feedEl.scrollHeight;
+    if (topSentinel) { topSentinel.remove(); topSentinel = null; }
+    feedEl.insertAdjacentHTML("afterbegin", html);
+    renderedStart = start;
+    observeCards();
+    attachTopSentinel();
+    feedEl.scrollTop = prevScrollTop + (feedEl.scrollHeight - prevScrollHeight);
   }
 
   let cardObserver = null;
@@ -239,6 +317,12 @@
     io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) renderNextBatch();
+      });
+    }, { root: feedEl, threshold: 0 });
+
+    ioTop = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) renderPrevBatch();
       });
     }, { root: feedEl, threshold: 0 });
 
@@ -318,13 +402,28 @@
     parshaListEl.innerHTML = html;
   }
 
-  // Jump the feed to a given verse index. Uses the single-write renderUpTo()
-  // (not a loop of renderNextBatch()) so a jump to a late verse (e.g. near
-  // verse 5,846) never blocks the main thread the way the original per-batch
-  // deep-link loop did before that bug was fixed. Shared by the parsha
-  // navigator and the kept-verses sheet.
+  // Jump the feed to a given verse index. Shared by the parsha navigator,
+  // search results, the kept/notes sheets, keyboard nav, and the initial
+  // deep-link/resume jump in start(). Three cases, all bounded cost:
+  //  1. idx already rendered (within [renderedStart, renderedCount)) — just
+  //     scroll, no DOM write.
+  //  2. idx is a close forward jump — cheap single-write contiguous fill via
+  //     renderUpTo() (unchanged from the original deep-link perf fix).
+  //  3. idx is a far jump (forward or backward, e.g. a deep link near verse
+  //     5,846, or a search/kept-row jump across the whole dataset) —
+  //     windowJumpTo() renders a small bounded window instead of everything
+  //     in between. This is what actually fixes the multi-second hang risk;
+  //     see windowJumpTo()'s comment for the measured before/after numbers.
   function jumpToIndex(idx) {
-    renderUpTo(idx);
+    const alreadyRendered = idx >= renderedStart && idx < renderedCount;
+    if (!alreadyRendered) {
+      const forwardGap = idx - renderedCount;
+      if (idx >= renderedCount && forwardGap <= CONTIGUOUS_FILL_LIMIT) {
+        renderUpTo(idx);
+      } else {
+        windowJumpTo(idx);
+      }
+    }
     requestAnimationFrame(() => {
       const el = feedEl.querySelector(`.verse-card[data-idx="${idx}"]`);
       if (el) el.scrollIntoView({ block: "start" });
