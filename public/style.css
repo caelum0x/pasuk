@@ -250,6 +250,93 @@ html, body {
 }
 .feed-progress-label:active { opacity: 0.8; }
 
+.kept-btn {
+  position: fixed;
+  top: calc(18px + var(--safe-top));
+  left: 16px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+  z-index: 5;
+  pointer-events: auto;
+  background: rgba(19,20,25,0.55);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.kept-btn:active { opacity: 0.8; }
+
+/* ---------- Kept verses sheet ---------- */
+.kept-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.kept-empty {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+  padding: 8px 2px 24px;
+}
+
+.kept-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.kept-row-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kept-row-main:active { opacity: 0.8; }
+
+.kept-row-tag {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.kept-row-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+.kept-row-remove {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--fg-faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.kept-row-remove:active { color: var(--fg); }
+
 /* ---------- Parsha navigator ---------- */
 .parsha-list {
   display: flex;

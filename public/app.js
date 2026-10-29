@@ -20,6 +20,10 @@
   const parshaBackdrop = document.getElementById("parshaBackdrop");
   const parshaClose = document.getElementById("parshaClose");
   const parshaListEl = document.getElementById("parshaList");
+  const keptSheet = document.getElementById("keptSheet");
+  const keptBackdrop = document.getElementById("keptBackdrop");
+  const keptClose = document.getElementById("keptClose");
+  const keptListEl = document.getElementById("keptList");
 
   let verses = [];
   let renderedCount = 0;
@@ -28,6 +32,7 @@
   let io = null;
   let progressBar = null;
   let progressLabel = null;
+  let keptBtn = null;
   let parshas = []; // [{ parsha, book, firstIdx, lastIdx, startChapter, startVerse, endChapter, endVerse, count }]
   let currentParsha = "";
 
@@ -227,19 +232,68 @@
     parshaListEl.innerHTML = html;
   }
 
-  // Jump to a parsha's first verse. Uses the single-write renderUpTo() (not a
-  // loop of renderNextBatch()) so a jump to a late parsha (e.g. Vezot
-  // Haberachah, near verse 5,846) never blocks the main thread the way the
-  // original per-batch deep-link loop did before that bug was fixed.
+  // Jump the feed to a given verse index. Uses the single-write renderUpTo()
+  // (not a loop of renderNextBatch()) so a jump to a late verse (e.g. near
+  // verse 5,846) never blocks the main thread the way the original per-batch
+  // deep-link loop did before that bug was fixed. Shared by the parsha
+  // navigator and the kept-verses sheet.
+  function jumpToIndex(idx) {
+    renderUpTo(idx);
+    requestAnimationFrame(() => {
+      const el = feedEl.querySelector(`.verse-card[data-idx="${idx}"]`);
+      if (el) el.scrollIntoView({ block: "start" });
+    });
+  }
+
   function jumpToParsha(name) {
     const target = parshas.find((p) => p.parsha === name);
     if (!target) return;
-    renderUpTo(target.firstIdx);
     closeParshaSheet();
-    requestAnimationFrame(() => {
-      const el = feedEl.querySelector(`.verse-card[data-idx="${target.firstIdx}"]`);
-      if (el) el.scrollIntoView({ block: "start" });
-    });
+    jumpToIndex(target.firstIdx);
+  }
+
+  // ---------- Kept verses sheet ----------
+  // The side-rail "Keep" action only ever wrote to localStorage with no way
+  // to see or revisit what was kept — the feature was effectively write-only.
+  // This renders every currently-kept verse (resolved live against `likes`)
+  // so a kept verse can be reopened or un-kept without re-scrolling the feed.
+  function renderKeptList() {
+    const kept = verses
+      .map((v, idx) => ({ v, idx }))
+      .filter(({ v }) => likes.has(v.id));
+
+    if (kept.length === 0) {
+      keptListEl.innerHTML = `<p class="kept-empty">No kept verses yet — tap the heart on any verse to save it here.</p>`;
+      return;
+    }
+
+    keptListEl.innerHTML = kept
+      .map(
+        ({ v, idx }) => `
+      <div class="kept-row">
+        <button class="kept-row-main" data-idx="${idx}">
+          <span class="kept-row-tag">${escapeHtml(v.book)} ${v.chapter}:${v.verse} &middot; ${escapeHtml(v.parsha || "")}</span>
+          <span class="kept-row-text">${escapeHtml(truncate(v.translation, 110))}</span>
+        </button>
+        <button class="kept-row-remove" data-id="${v.id}" aria-label="Remove from kept">&times;</button>
+      </div>`
+      )
+      .join("");
+  }
+
+  function updateKeptCount() {
+    if (keptBtn) keptBtn.textContent = likes.size ? `Kept (${likes.size})` : "Kept";
+  }
+
+  function openKeptSheet() {
+    renderKeptList();
+    keptSheet.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeKeptSheet() {
+    keptSheet.hidden = true;
+    document.body.style.overflow = "";
   }
 
   function openParshaSheet() {
@@ -301,6 +355,8 @@
       btn.classList.toggle("liked", likes.has(id));
       btn.querySelector(".action-count").textContent = likes.has(id) ? "Kept" : "Keep";
     }
+    updateKeptCount();
+    if (!keptSheet.hidden) renderKeptList();
   }
 
   async function shareVerse(id) {
@@ -373,6 +429,15 @@
     label.addEventListener("click", openParshaSheet);
     document.body.appendChild(label);
     progressLabel = label;
+
+    const kBtn = document.createElement("button");
+    kBtn.className = "kept-btn";
+    kBtn.type = "button";
+    kBtn.setAttribute("aria-label", "Your kept verses");
+    kBtn.addEventListener("click", openKeptSheet);
+    document.body.appendChild(kBtn);
+    keptBtn = kBtn;
+    updateKeptCount();
   }
 
   async function start() {
@@ -397,13 +462,7 @@
     const hashId = location.hash.replace("#", "");
     if (hashId) {
       const idx = verses.findIndex((v) => v.id === hashId);
-      if (idx >= 0) {
-        renderUpTo(idx);
-        requestAnimationFrame(() => {
-          const el = feedEl.querySelector(`.verse-card[data-id="${hashId}"]`);
-          if (el) el.scrollIntoView({ block: "start" });
-        });
-      }
+      if (idx >= 0) jumpToIndex(idx);
     }
   }
 
@@ -416,8 +475,21 @@
     const row = e.target.closest(".parsha-row");
     if (row) jumpToParsha(row.dataset.parsha);
   });
+  keptClose.addEventListener("click", closeKeptSheet);
+  keptBackdrop.addEventListener("click", closeKeptSheet);
+  keptListEl.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".kept-row-remove");
+    if (removeBtn) { toggleLike(removeBtn.dataset.id); return; }
+    const row = e.target.closest(".kept-row-main");
+    if (row) {
+      const idx = parseInt(row.dataset.idx, 10);
+      closeKeptSheet();
+      jumpToIndex(idx);
+    }
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !sheet.hidden) closeSheet();
     if (e.key === "Escape" && !parshaSheet.hidden) closeParshaSheet();
+    if (e.key === "Escape" && !keptSheet.hidden) closeKeptSheet();
   });
 })();

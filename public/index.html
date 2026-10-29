@@ -44,6 +44,19 @@
 <!-- FEED -->
 <main id="feed" class="screen feed-screen" hidden></main>
 
+<!-- KEPT VERSES SHEET -->
+<div id="keptSheet" class="sheet" hidden>
+  <div class="sheet-backdrop" id="keptBackdrop"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Your kept verses">
+    <button id="keptClose" class="sheet-close" aria-label="Close">&times;</button>
+    <div class="sheet-scroll">
+      <div class="sheet-kicker">Saved on this device</div>
+      <h2 class="sheet-chapter-title">Your kept verses</h2>
+      <div id="keptList" class="kept-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- PARSHA NAVIGATOR SHEET -->
 <div id="parshaSheet" class="sheet" hidden>
   <div class="sheet-backdrop" id="parshaBackdrop"></div>
