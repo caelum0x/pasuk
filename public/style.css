@@ -342,6 +342,38 @@ html, body {
 .kept-row-remove:active { color: var(--fg); }
 
 /* ---------- Parsha navigator ---------- */
+.parsha-search {
+  display: block;
+  width: 100%;
+  background: rgba(238,240,244,0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 18px;
+  color: var(--fg);
+  font-size: 14.5px;
+  font-family: inherit;
+  outline: none;
+  margin: 2px 0 16px;
+}
+.parsha-search::placeholder { color: var(--fg-faint); }
+
+.parsha-result-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg);
+  text-align: left;
+  padding: 12px 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.parsha-result-item:active { background: rgba(255,255,255,0.05); }
+
 .parsha-list {
   display: flex;
   flex-direction: column;

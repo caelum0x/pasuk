@@ -21,6 +21,9 @@
   const parshaBackdrop = document.getElementById("parshaBackdrop");
   const parshaClose = document.getElementById("parshaClose");
   const parshaListEl = document.getElementById("parshaList");
+  const parshaSearchEl = document.getElementById("parshaSearch");
+  const parshaSearchResultsEl = document.getElementById("parshaSearchResults");
+  const parshaSheetFooterEl = document.getElementById("parshaSheetFooter");
   const keptSheet = document.getElementById("keptSheet");
   const keptBackdrop = document.getElementById("keptBackdrop");
   const keptClose = document.getElementById("keptClose");
@@ -374,8 +377,56 @@
     document.body.style.overflow = "";
   }
 
+  // ---------- Verse search ----------
+  // The parsha navigator could only jump to the *start* of one of the 54
+  // weekly portions — with 5,846 verses and no text search, finding a
+  // specific passage (e.g. "let there be light", or a half-remembered
+  // phrase) meant manually scrolling or already knowing which parsha it's
+  // in. Sibling apps Shloka and Versling already ship verse search; Pasuk
+  // and Gatha did not. Reuses the same jumpToIndex() used by the parsha
+  // rows and kept-sheet, so no new perf-unsafe jump path is introduced.
+  function renderSearchResults(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      parshaSearchResultsEl.hidden = true;
+      parshaListEl.hidden = false;
+      parshaSheetFooterEl.hidden = false;
+      return;
+    }
+    parshaListEl.hidden = true;
+    parshaSheetFooterEl.hidden = true;
+    parshaSearchResultsEl.hidden = false;
+
+    const matches = verses
+      .map((v, idx) => ({ v, idx }))
+      .filter(({ v }) =>
+        v.translation.toLowerCase().includes(q) ||
+        v.hebrew.includes(query.trim()) ||
+        v.parsha.toLowerCase().includes(q) ||
+        v.book.toLowerCase().includes(q)
+      )
+      .slice(0, 40);
+
+    if (!matches.length) {
+      parshaSearchResultsEl.innerHTML = `<p class="kept-empty">No verses match "${escapeHtml(query)}".</p>`;
+      return;
+    }
+
+    parshaSearchResultsEl.innerHTML = matches
+      .map(
+        ({ v, idx }) => `
+      <button class="parsha-result-item" data-idx="${idx}">
+        <span class="kept-row-tag">${escapeHtml(v.book)} ${v.chapter}:${v.verse} &middot; ${escapeHtml(v.parsha || "")}</span>
+        <span class="kept-row-text">${escapeHtml(truncate(v.translation, 110))}</span>
+      </button>`
+      )
+      .join("");
+  }
+
   function openParshaSheet() {
     renderParshaList();
+    parshaSearchEl.value = "";
+    renderSearchResults("");
     parshaSheet.hidden = false;
     document.body.style.overflow = "hidden";
   }
@@ -571,6 +622,14 @@
   parshaListEl.addEventListener("click", (e) => {
     const row = e.target.closest(".parsha-row");
     if (row) jumpToParsha(row.dataset.parsha);
+  });
+  parshaSearchEl.addEventListener("input", () => renderSearchResults(parshaSearchEl.value));
+  parshaSearchResultsEl.addEventListener("click", (e) => {
+    const item = e.target.closest(".parsha-result-item");
+    if (!item) return;
+    const idx = parseInt(item.dataset.idx, 10);
+    closeParshaSheet();
+    jumpToIndex(idx);
   });
   keptClose.addEventListener("click", closeKeptSheet);
   keptBackdrop.addEventListener("click", closeKeptSheet);
