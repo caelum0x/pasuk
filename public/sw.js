@@ -2,7 +2,7 @@
 // Ported from Shloka's sw.js pattern (2026-10-29).
 // Bump CACHE_VERSION whenever a cached file's content changes so old
 // caches get cleaned up and clients pick up the new files.
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `pasuk-${CACHE_VERSION}`;
 
 const SHELL_URLS = [
@@ -11,6 +11,7 @@ const SHELL_URLS = [
   "/app.js",
   "/style.css",
   "/manifest.json",
+  "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
