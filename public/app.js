@@ -25,6 +25,10 @@
   const keptBackdrop = document.getElementById("keptBackdrop");
   const keptClose = document.getElementById("keptClose");
   const keptListEl = document.getElementById("keptList");
+  const notesSheet = document.getElementById("notesSheet");
+  const notesBackdrop = document.getElementById("notesBackdrop");
+  const notesClose = document.getElementById("notesClose");
+  const notesListEl = document.getElementById("notesList");
 
   let verses = [];
   let renderedCount = 0;
@@ -34,6 +38,7 @@
   let progressBar = null;
   let progressLabel = null;
   let keptBtn = null;
+  let notesBtn = null;
   let parshas = []; // [{ parsha, book, firstIdx, lastIdx, startChapter, startVerse, endChapter, endVerse, count }]
   let currentParsha = "";
 
@@ -305,6 +310,59 @@
     if (keptBtn) keptBtn.textContent = likes.size ? `Kept (${likes.size})` : "Kept";
   }
 
+  // ---------- Notes sheet ----------
+  // The per-verse "Note" action (private reflection textarea, opened from the
+  // detail sheet) only ever wrote to localStorage keyed by verse id, with no
+  // way to see or revisit which verses had notes — the same write-only gap
+  // the Kept sheet fixed for likes, but left open for notes. Once a noted
+  // verse scrolled out of the render batch, the only way back to it was
+  // re-scrolling thousands of verses to find it again.
+  function removeNote(id) {
+    delete notes[id];
+    saveNotes(notes);
+    const btn = feedEl.querySelector(`.note-btn[data-id="${id}"] .action-count`);
+    if (btn) btn.textContent = "Note";
+    updateNotesCount();
+  }
+
+  function renderNotesList() {
+    const withNotes = verses.filter((v) => notes[v.id]);
+
+    if (withNotes.length === 0) {
+      notesListEl.innerHTML = `<p class="kept-empty">No notes yet — tap any verse, then write a private reflection in the sheet.</p>`;
+      return;
+    }
+
+    notesListEl.innerHTML = withNotes
+      .map(
+        (v) => `
+      <div class="kept-row">
+        <button class="kept-row-main" data-id="${v.id}">
+          <span class="kept-row-tag">${escapeHtml(v.book)} ${v.chapter}:${v.verse} &middot; ${escapeHtml(v.parsha || "")}</span>
+          <span class="kept-row-text">${escapeHtml(truncate(notes[v.id], 110))}</span>
+        </button>
+        <button class="kept-row-remove" data-id="${v.id}" aria-label="Delete note">&times;</button>
+      </div>`
+      )
+      .join("");
+  }
+
+  function updateNotesCount() {
+    const n = Object.keys(notes).length;
+    if (notesBtn) notesBtn.textContent = n ? `Notes (${n})` : "Notes";
+  }
+
+  function openNotesSheet() {
+    renderNotesList();
+    notesSheet.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeNotesSheet() {
+    notesSheet.hidden = true;
+    document.body.style.overflow = "";
+  }
+
   function openKeptSheet() {
     renderKeptList();
     keptSheet.hidden = false;
@@ -356,6 +414,7 @@
       saveNotes(notes);
       const btn = feedEl.querySelector(`.note-btn[data-id="${id}"] .action-count`);
       if (btn) btn.textContent = notes[id] ? "Noted" : "Note";
+      updateNotesCount();
     };
 
     sheet.hidden = false;
@@ -458,6 +517,15 @@
     document.body.appendChild(kBtn);
     keptBtn = kBtn;
     updateKeptCount();
+
+    const nBtn = document.createElement("button");
+    nBtn.className = "kept-btn notes-btn";
+    nBtn.type = "button";
+    nBtn.setAttribute("aria-label", "Your notes");
+    nBtn.addEventListener("click", openNotesSheet);
+    document.body.appendChild(nBtn);
+    notesBtn = nBtn;
+    updateNotesCount();
   }
 
   async function start() {
@@ -516,10 +584,22 @@
       jumpToIndex(idx);
     }
   });
+  notesClose.addEventListener("click", closeNotesSheet);
+  notesBackdrop.addEventListener("click", closeNotesSheet);
+  notesListEl.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".kept-row-remove");
+    if (removeBtn) { removeNote(removeBtn.dataset.id); renderNotesList(); return; }
+    const row = e.target.closest(".kept-row-main");
+    if (row) {
+      closeNotesSheet();
+      openSheet(row.dataset.id);
+    }
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !sheet.hidden) closeSheet();
     if (e.key === "Escape" && !parshaSheet.hidden) closeParshaSheet();
     if (e.key === "Escape" && !keptSheet.hidden) closeKeptSheet();
+    if (e.key === "Escape" && !notesSheet.hidden) closeNotesSheet();
   });
 
   if (hasDeepLinkHash) start();
