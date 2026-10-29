@@ -33,6 +33,48 @@
   const notesClose = document.getElementById("notesClose");
   const notesListEl = document.getElementById("notesList");
 
+  // ---------- Modal focus management ----------
+  // All four sheets (detail, parsha navigator, kept, notes) declare
+  // role="dialog" aria-modal="true" but, until now, never actually moved
+  // focus into the dialog, never trapped Tab/Shift+Tab inside it, never
+  // hid the background feed from assistive tech, and never restored focus
+  // to whatever triggered the sheet on close. A keyboard or screen-reader
+  // user could tab straight out of an "open" modal into the hidden
+  // background feed — a real WCAG 2.1 violation (2.4.3 / 4.1.2), not a
+  // hypothetical one, since every sheet already claims aria-modal="true".
+  let activeModal = null;
+  let lastFocused = null;
+
+  function focusableIn(container) {
+    return Array.from(
+      container.querySelectorAll('button, [href], input, textarea, select, [tabindex]')
+    ).filter((el) => !el.disabled && !el.closest("[hidden]"));
+  }
+
+  function openModal(overlayEl) {
+    lastFocused = document.activeElement;
+    overlayEl.hidden = false;
+    document.body.style.overflow = "hidden";
+    activeModal = overlayEl;
+    const panel = overlayEl.querySelector(".sheet-panel");
+    const focusables = focusableIn(panel);
+    if (focusables[0]) focusables[0].focus({ preventScroll: true });
+    feedEl.setAttribute("aria-hidden", "true");
+    if (!onboarding.hidden) onboarding.setAttribute("aria-hidden", "true");
+  }
+
+  function closeModal(overlayEl) {
+    overlayEl.hidden = true;
+    document.body.style.overflow = "";
+    activeModal = null;
+    feedEl.removeAttribute("aria-hidden");
+    onboarding.removeAttribute("aria-hidden");
+    if (lastFocused && typeof lastFocused.focus === "function") {
+      lastFocused.focus({ preventScroll: true });
+    }
+    lastFocused = null;
+  }
+
   let verses = [];
   let renderedCount = 0;
   const BATCH = 20;
@@ -357,24 +399,20 @@
 
   function openNotesSheet() {
     renderNotesList();
-    notesSheet.hidden = false;
-    document.body.style.overflow = "hidden";
+    openModal(notesSheet);
   }
 
   function closeNotesSheet() {
-    notesSheet.hidden = true;
-    document.body.style.overflow = "";
+    closeModal(notesSheet);
   }
 
   function openKeptSheet() {
     renderKeptList();
-    keptSheet.hidden = false;
-    document.body.style.overflow = "hidden";
+    openModal(keptSheet);
   }
 
   function closeKeptSheet() {
-    keptSheet.hidden = true;
-    document.body.style.overflow = "";
+    closeModal(keptSheet);
   }
 
   // ---------- Verse search ----------
@@ -427,13 +465,11 @@
     renderParshaList();
     parshaSearchEl.value = "";
     renderSearchResults("");
-    parshaSheet.hidden = false;
-    document.body.style.overflow = "hidden";
+    openModal(parshaSheet);
   }
 
   function closeParshaSheet() {
-    parshaSheet.hidden = true;
-    document.body.style.overflow = "";
+    closeModal(parshaSheet);
   }
 
   function openSheet(id) {
@@ -468,13 +504,11 @@
       updateNotesCount();
     };
 
-    sheet.hidden = false;
-    document.body.style.overflow = "hidden";
+    openModal(sheet);
   }
 
   function closeSheet() {
-    sheet.hidden = true;
-    document.body.style.overflow = "";
+    closeModal(sheet);
   }
 
   function toggleLike(id) {
@@ -659,6 +693,24 @@
     if (e.key === "Escape" && !parshaSheet.hidden) closeParshaSheet();
     if (e.key === "Escape" && !keptSheet.hidden) closeKeptSheet();
     if (e.key === "Escape" && !notesSheet.hidden) closeNotesSheet();
+
+    if (e.key === "Tab" && activeModal) {
+      const panel = activeModal.querySelector(".sheet-panel");
+      const focusables = focusableIn(panel);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!panel.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   });
 
   if (hasDeepLinkHash) start();
