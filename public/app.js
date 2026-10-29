@@ -164,6 +164,20 @@
     `;
   }
 
+  // Hebrew verse text is stored *with* niqqud (vowel-point combining marks,
+  // e.g. "בְּרֵאשִׁית") straight from the source API. Standard Hebrew
+  // keyboards/layouts have no niqqud keys, so a real user typing a plain,
+  // undotted search term (e.g. "בראשית") into the verse search box never
+  // matched, even for a word that is clearly present in the text — a
+  // substring check against dotted text can't match an undotted query.
+  // Strip just the combining marks (niqqud + cantillation, Unicode general
+  // category Mn), not punctuation like maqaf/sof-pasuq, so search works for
+  // the plain text real users actually type.
+  const NIQQUD_RE = /[\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]/g;
+  function stripNiqqud(s) {
+    return s.replace(NIQQUD_RE, "");
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -454,11 +468,14 @@
     parshaSheetFooterEl.hidden = true;
     parshaSearchResultsEl.hidden = false;
 
+    const rawQuery = query.trim();
+    const plainQuery = stripNiqqud(rawQuery);
     const matches = verses
       .map((v, idx) => ({ v, idx }))
       .filter(({ v }) =>
         v.translation.toLowerCase().includes(q) ||
-        v.hebrew.includes(query.trim()) ||
+        v.hebrew.includes(rawQuery) ||
+        (plainQuery && (v.hebrewPlain || v.hebrew).includes(plainQuery)) ||
         v.parsha.toLowerCase().includes(q) ||
         v.book.toLowerCase().includes(q)
       )
@@ -637,6 +654,10 @@
     startBtn.textContent = "Loading...";
     try {
       verses = await fetchData();
+      // Precompute the undotted (niqqud-stripped) Hebrew once per verse so
+      // every search keystroke doesn't re-run the regex over all 5,846
+      // verses — and so plain-Hebrew queries (see stripNiqqud() above) match.
+      verses.forEach((v) => { v.hebrewPlain = stripNiqqud(v.hebrew); });
     } catch (e) {
       startBtn.textContent = "Could not load — tap to retry";
       startBtn.disabled = false;
