@@ -5,6 +5,7 @@
     heart: `<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.5 8.2 2.3 5 5.6 5 7.9 5 9.6 6.3 12 9c2.4-2.7 4.1-4 6.4-4 3.3 0 5.1 3.2 3.6 6.7C19.5 16.4 12 21 12 21z"/></svg>`,
     note: `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
     share: `<svg viewBox="0 0 24 24"><path d="M12 3v12M12 3l4 4M12 3 8 7M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>`,
+    card: `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5.5-5.5a2 2 0 0 0-2.8 0L3 20"/></svg>`,
   };
 
   const LS_LIKES = "pasuk:likes";
@@ -174,6 +175,10 @@
           <button class="action-btn share-btn" data-id="${v.id}" aria-label="Share">
             ${ICONS.share}
             <span class="action-count">Share</span>
+          </button>
+          <button class="action-btn card-btn" data-id="${v.id}" aria-label="Share as image">
+            ${ICONS.card}
+            <span class="action-count">Card</span>
           </button>
         </div>
       </section>
@@ -678,6 +683,44 @@
     }
   }
 
+  // Generates a real shareable verse-image card (Hebrew + translation +
+  // the Pasuk mark) client-side on a canvas, via the shared `cardshare.js`
+  // module (same mechanism ported into shloka/versling/gatha), then shares
+  // it through the Web Share API with the file attached, or downloads it
+  // if the device/browser doesn't support sharing files. Hebrew renders
+  // right-to-left, same as the app's own detail-sheet/preview text.
+  async function shareVerseCard(id) {
+    const v = verses.find((x) => x.id === id);
+    if (!v || !window.VerseCard) return;
+    toast("Creating image…");
+    try {
+      const canvas = window.VerseCard.renderVerseCard({
+        originalText: v.hebrew,
+        originalFont: "400 54px serif",
+        originalDir: "rtl",
+        translation: v.translation,
+        reference: `${v.book} ${v.chapter}:${v.verse} · Parashat ${v.parsha}`,
+        chapterLabel: `${v.book} ${v.chapter}:${v.verse}`,
+        appName: "Pasuk",
+        mark: "א",
+        domain: "pasuk.ereboslab.com",
+        bg: "#0a0b0d",
+        fg: "#eef0f4",
+        fgDim: "rgba(238,240,244,0.62)",
+        accent: "#6f9bd1",
+      });
+      const result = await window.VerseCard.shareCardImage(canvas, {
+        filename: `pasuk-${id}.png`,
+        shareText: `"${v.translation}" — ${v.book} ${v.chapter}:${v.verse}\n${location.origin}/#${id}`,
+        shareTitle: "Pasuk",
+      });
+      if (result === "shared") toast("Shared");
+      else if (result === "downloaded") toast("Image saved");
+    } catch (e) {
+      toast("Could not create image");
+    }
+  }
+
   let toastTimer = null;
   function toast(msg) {
     let el = document.getElementById("toast");
@@ -710,6 +753,8 @@
       if (noteBtn) { openSheet(noteBtn.dataset.id); return; }
       const shareBtn = e.target.closest(".share-btn");
       if (shareBtn) { shareVerse(shareBtn.dataset.id); return; }
+      const cardBtn = e.target.closest(".card-btn");
+      if (cardBtn) { shareVerseCard(cardBtn.dataset.id); return; }
       const openTarget = e.target.closest("[data-open]");
       if (openTarget) { openSheet(openTarget.getAttribute("data-open")); return; }
     });
