@@ -11,6 +11,53 @@
   const LS_LIKES = "pasuk:likes";
   const LS_NOTES = "pasuk:notes";
   const LS_LAST_READ = "pasuk:lastRead";
+  const LS_TEXT_SCALE = "pasuk:textScale";
+
+  // ---------- Adjustable reading text size ----------
+  // Sibling mobile apps Ayah/Stichos/Shloka-mobile already ship a
+  // persisted, cycling text-size control (their own `cycleTextScale`
+  // pattern) for exactly this reason: a sacred-text reading app's core
+  // value is its own body text (here, the verse translation + Hebrew),
+  // and a fixed font size is a real accessibility/comfort gap for
+  // low-vision or older readers with no way to make it bigger — or for
+  // anyone who wants to fit more context on screen by making it smaller.
+  // Pasuk (like sibling web apps Shloka/Gatha/Versling) never had this.
+  // Scales only the hero reading text (feed card translation + Hebrew
+  // preview, detail-sheet Hebrew + translation) via a single CSS custom
+  // property, not UI chrome (labels, buttons, headers).
+  const TEXT_SCALE_STEPS = [0.85, 1, 1.15, 1.3];
+  const DEFAULT_TEXT_SCALE_INDEX = 1;
+
+  function textScaleIndex(scale) {
+    let closest = DEFAULT_TEXT_SCALE_INDEX;
+    let closestDiff = Infinity;
+    TEXT_SCALE_STEPS.forEach((step, i) => {
+      const diff = Math.abs(step - scale);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closest = i;
+      }
+    });
+    return closest;
+  }
+
+  function nextTextScale(scale) {
+    const idx = textScaleIndex(scale);
+    return TEXT_SCALE_STEPS[(idx + 1) % TEXT_SCALE_STEPS.length];
+  }
+
+  function safeGetTextScale() {
+    try {
+      const raw = Number(localStorage.getItem(LS_TEXT_SCALE));
+      return TEXT_SCALE_STEPS.includes(raw) ? raw : TEXT_SCALE_STEPS[DEFAULT_TEXT_SCALE_INDEX];
+    } catch (e) {
+      return TEXT_SCALE_STEPS[DEFAULT_TEXT_SCALE_INDEX];
+    }
+  }
+
+  function safeSetTextScale(scale) {
+    try { localStorage.setItem(LS_TEXT_SCALE, String(scale)); } catch (e) { /* storage unavailable */ }
+  }
 
   const onboarding = document.getElementById("onboarding");
   const startBtn = document.getElementById("startBtn");
@@ -101,6 +148,8 @@
   let progressLabel = null;
   let keptBtn = null;
   let notesBtn = null;
+  let textSizeBtn = null;
+  let textScale = safeGetTextScale();
   let parshas = []; // [{ parsha, book, firstIdx, lastIdx, startChapter, startVerse, endChapter, endVerse, count }]
   let currentParsha = "";
   let currentIdx = 0;
@@ -131,6 +180,32 @@
   function safeSetLastRead(id) {
     try { localStorage.setItem(LS_LAST_READ, id); } catch (e) { /* storage unavailable */ }
   }
+
+  // Writes the current text-scale onto the root element's CSS custom
+  // property (every scaled rule in style.css reads it via `calc(... *
+  // var(--text-scale))`), so this one call updates every already-rendered
+  // card and sheet live, not just future ones — no per-element DOM walk
+  // needed. Also keeps the pill's own label/aria-label in sync when the
+  // button already exists (it may not yet, on the very first call before
+  // createProgressBar() has run).
+  function applyTextScale(scale) {
+    document.documentElement.style.setProperty("--text-scale", String(scale));
+    if (textSizeBtn) {
+      const pct = Math.round(scale * 100);
+      textSizeBtn.textContent = `Aa ${pct}%`;
+      textSizeBtn.setAttribute("aria-label", `Text size, ${pct} percent, tap to change`);
+    }
+  }
+
+  function cycleTextScale() {
+    textScale = nextTextScale(textScale);
+    safeSetTextScale(textScale);
+    applyTextScale(textScale);
+  }
+
+  // Set the saved (or default) scale immediately, before the feed/onboarding
+  // ever paints, so a returning reader never sees a flash of the wrong size.
+  applyTextScale(textScale);
 
   const likes = loadSet(LS_LIKES);
   const notes = loadNotes();
@@ -792,6 +867,14 @@
     document.body.appendChild(nBtn);
     notesBtn = nBtn;
     updateNotesCount();
+
+    const tBtn = document.createElement("button");
+    tBtn.className = "kept-btn text-size-btn";
+    tBtn.type = "button";
+    tBtn.addEventListener("click", cycleTextScale);
+    document.body.appendChild(tBtn);
+    textSizeBtn = tBtn;
+    applyTextScale(textScale);
   }
 
   async function start() {

@@ -13,6 +13,12 @@
   --line: rgba(238,240,244,0.14);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Adjustable reading text size (see .text-size-btn / applyTextScale() in
+     app.js). Scales only the primary reading content (verse translation +
+     Hebrew, in both the feed card and the detail sheet) — not UI chrome
+     like labels/buttons — same scope as the text-size control already
+     shipped on sibling mobile apps Ayah/Stichos/Shloka-mobile. */
+  --text-scale: 1;
 }
 
 * { box-sizing: border-box; }
@@ -155,7 +161,7 @@ html, body {
 }
 
 .verse-text {
-  font-size: 21px;
+  font-size: calc(21px * var(--text-scale));
   line-height: 1.5;
   font-weight: 400;
   color: var(--fg);
@@ -163,7 +169,7 @@ html, body {
 }
 
 .verse-hebrew-preview {
-  font-size: 15px;
+  font-size: calc(15px * var(--text-scale));
   color: var(--fg-faint);
   margin: 0;
   direction: rtl;
@@ -276,6 +282,11 @@ html, body {
 
 .notes-btn {
   top: calc(54px + var(--safe-top));
+}
+
+.text-size-btn {
+  top: calc(90px + var(--safe-top));
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Kept verses sheet ---------- */
@@ -563,7 +574,7 @@ html, body {
 }
 
 .sheet-hebrew {
-  font-size: 19px;
+  font-size: calc(19px * var(--text-scale));
   line-height: 1.8;
   margin: 0 0 22px;
   color: var(--fg);
@@ -571,7 +582,7 @@ html, body {
 }
 
 .sheet-translation {
-  font-size: 15.5px;
+  font-size: calc(15.5px * var(--text-scale));
   line-height: 1.6;
   margin: 0;
   color: var(--fg);
