@@ -608,3 +608,61 @@ html, body {
     border-radius: 20px;
   }
 }
+
+/* Server-rendered `/v/<id>` share permalink (src/worker.js). Real browsers
+   bounce straight into the app via verse-redirect.js; this is what a
+   no-JS visitor or a link-preview crawler actually sees, so it has to
+   stand on its own — same dark-glass look as the rest of the app, not a
+   bare unstyled fallback. */
+html body.verse-permalink {
+  overflow: auto;
+  height: auto;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.verse-permalink-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.verse-permalink-ref {
+  margin: 0 0 16px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--fg-faint);
+}
+
+.verse-permalink-hebrew {
+  margin: 0 0 14px;
+  font-family: serif;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.verse-permalink-translation {
+  margin: 0 0 24px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+
+.verse-permalink-open {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}

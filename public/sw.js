@@ -2,7 +2,7 @@
 // Ported from Shloka's sw.js pattern (2026-10-29).
 // Bump CACHE_VERSION whenever a cached file's content changes so old
 // caches get cleaned up and clients pick up the new files.
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const CACHE_NAME = `pasuk-${CACHE_VERSION}`;
 
 const SHELL_URLS = [
@@ -51,16 +51,20 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // HTML navigations: network-first, so a fresh deploy is seen immediately
-  // when online, but a cached shell still loads when offline.
+  // when online, but a cached shell still loads when offline. Cache each
+  // navigation under its own real URL (not a hardcoded "/index.html" key —
+  // that would let a real-but-different HTML page, e.g. a /v/<id> share
+  // permalink, silently overwrite the cached app shell for every other
+  // visitor) and only fall back to the actual shell on offline failure.
   if (req.mode === "navigate" || req.headers.get("accept")?.includes("text/html")) {
     event.respondWith(
       fetch(req)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
           return res;
         })
-        .catch(() => caches.match("/index.html"))
+        .catch(() => caches.match(req).then((cached) => cached || caches.match("/index.html")))
     );
     return;
   }
