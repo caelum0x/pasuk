@@ -743,7 +743,7 @@
     const v = verses.find((x) => x.id === id);
     if (!v) return;
     const text = `"${v.translation}"\n— ${v.book} ${v.chapter}:${v.verse}, Parashat ${v.parsha}`;
-    const url = `${location.origin}/#${id}`;
+    const url = `${location.origin}/v/${id}`;
     if (navigator.share) {
       try {
         await navigator.share({ text, url, title: "Pasuk" });
@@ -786,7 +786,7 @@
       });
       const result = await window.VerseCard.shareCardImage(canvas, {
         filename: `pasuk-${id}.png`,
-        shareText: `"${v.translation}" — ${v.book} ${v.chapter}:${v.verse}\n${location.origin}/#${id}`,
+        shareText: `"${v.translation}" — ${v.book} ${v.chapter}:${v.verse}\n${location.origin}/v/${id}`,
         shareTitle: "Pasuk",
       });
       if (result === "shared") toast("Shared");
